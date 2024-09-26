@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point of View Selection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .pov {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px;
+            cursor: pointer;
+            background-color: #f9f9f9;
+            width: 45%;
+            max-width: 100%;
+            white-space: normal;
+            word-wrap: break-word;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .pov:hover {
+            background-color: #e0e0e0;
+        }
+        .container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .results {
+            margin-top: 50px;
+            text-align: left;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Choose the Preferred Point of View</h1>
+
+<div id="roundInfo"></div>
+
+<div class="container">
+    <div class="pov" id="pov1" onclick="selectPOV(0)">Loading...</div>
+    <div class="pov" id="pov2" onclick="selectPOV(1)">Loading...</div>
+</div>
+
+<div id="finalResult" class="results"></div>
+
+<div class="button-container">
+    <button id="saveBtn" onclick="saveRankings()" style="display:none;">Download Rankings</button>
+</div>
+
+<script>
+// Sample list of 100 points of view
+const pointsOfView = [
+    "We met a police officer and were surprised to find out they often feel disconnected from the communities they serve. It would be game-changing if more trust-building programs were implemented to enhance local relationships.",
+    "We met a school teacher who feels their ability to detect at-risk children is limited. It would be game-changing if teachers received specialized training on how to identify early signs of criminal influence.",
+    "We met a social worker and discovered they struggle to get timely updates from schools and healthcare providers. It would be game-changing if social services, schools, and healthcare teams had a more synchronized communication system.",
+    "We met a healthcare professional and realized they rarely collaborate with social workers in managing at-risk children. It would be game-changing if mental health professionals were routinely included in team discussions.",
+    // Add more points of view here...
+];
+
+// Initialize the rounds
+let currentRound = [];
+let nextRound = [];
+let eliminatedPOVs = [];
+let finalRankings = [];
+let currentIndex = 0;
+let roundNumber = 1;
+
+// Function to start the tournament
+function startTournament() {
+    currentRound = pointsOfView.slice();  // Make a copy of the original array
+    shuffleArray(currentRound);           // Shuffle the POVs for random pairings
+    displayNextPair();
+}
+
+// Function to display the next pair of POVs
+function displayNextPair() {
+    if (currentIndex >= currentRound.length - 1) {
+        if (nextRound.length > 1) {
+            // Move to the next round
+            currentRound = nextRound.slice();
+            nextRound = [];
+            currentIndex = 0;
+            roundNumber++;
+        } else {
+            // Tournament is over, display the winning POV and the top 10 runners-up
+            finalRankings.push(nextRound[0]);  // Add the final winner
+            displayResults(finalRankings[0], eliminatedPOVs.slice(0, 10));  // Display top 10 runners-up
+            document.getElementById("saveBtn").style.display = 'block';  // Show save button
+            return;
+        }
+    }
+
+    // Update round information
+    document.getElementById('roundInfo').innerText = `Round ${roundNumber}, Pair ${Math.floor(currentIndex / 2) + 1}`;
+
+    // Display two POVs
+    document.getElementById('pov1').innerText = currentRound[currentIndex];
+    document.getElementById('pov2').innerText = currentRound[currentIndex + 1];
+}
+
+// Function to handle POV selection
+function selectPOV(choice) {
+    if (choice === 0) {
+        nextRound.push(currentRound[currentIndex]);  // Select the first POV
+        eliminatedPOVs.push(currentRound[currentIndex + 1]);  // The second POV is eliminated
+        finalRankings.push(currentRound[currentIndex + 1]);  // Add eliminated POV to the rankings
+    } else {
+        nextRound.push(currentRound[currentIndex + 1]);  // Select the second POV
+        eliminatedPOVs.push(currentRound[currentIndex]);  // The first POV is eliminated
+        finalRankings.push(currentRound[currentIndex]);  // Add eliminated POV to the rankings
+    }
+    currentIndex += 2;  // Move to the next pair
+    displayNextPair();  // Display the next pair
+}
+
+// Function to shuffle the POVs (Fisher-Yates Shuffle)
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// Function to display the final result and top 10 runners-up
+function displayResults(winner, runnersUp) {
+    document.getElementById('pov1').style.display = 'none';  // Hide POV selection elements
+    document.getElementById('pov2').style.display = 'none';
+    document.getElementById('roundInfo').style.display = 'none';
+
+    let resultDiv = document.getElementById('finalResult');
+    let resultHTML = `<h2>The most preferred Point of View is:</h2>`;
+    resultHTML += `<p><strong>${winner}</strong></p>`;
+    resultHTML += `<h3>Top 10 Runners-up:</h3><ol>`;
+
+    runnersUp.forEach(function(pov) {
+        resultHTML += `<li>${pov}</li>`;
+    });
+
+    resultHTML += `</ol>`;
+    resultDiv.innerHTML = resultHTML;  // Display the results
+}
+
+// Function to save rankings to a file
+function saveRankings() {
+    const data = {
+        winner: finalRankings[0],
+        rankings: finalRankings
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'pov_rankings.json';
+    link.click();
+
+    // Clean up the URL object after download
+    URL.revokeObjectURL(url);
+}
+
+// Start the tournament when the page loads
+window.onload = startTournament;
+
+</script>
+
+</body>
+</html>
